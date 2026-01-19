@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-01-19
+
+### fix(docs): resolve documentation inconsistencies and cleanup
+
+- `PRD.md`: Update text format to structured format with labels (`품목: <대형폐기물명> | 구분: <대형폐기물구분명>`), update result count from 5 to 10
+- `POC.md`: Update text format documentation to match new structured format
+- `backend/app/search.py`: Correct misleading comment from "KR-SBERT" to "Korean sentence embedding model"
+- `backend/scripts/generate_embeddings.py`: Change text format to structured labels, fix comment to reflect new format
+
 ## 2026-01-16
 
 ### feat: implement initial waste disposal search system

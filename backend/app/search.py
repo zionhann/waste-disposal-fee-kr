@@ -1,12 +1,14 @@
 import numpy as np
 import pandas as pd
-from pathlib import Path
 from sentence_transformers import SentenceTransformer
+from pathlib import Path
 from sklearn.metrics.pairwise import cosine_similarity
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 CSV_PATH = BASE_DIR.parent / "waste_disposal_fee.csv"
+
+MODEL_NAME = "jhgan/ko-sroberta-multitask"
 
 model: SentenceTransformer | None = None
 embeddings: np.ndarray | None = None
@@ -17,9 +19,18 @@ def load_resources():
     """Load model, embeddings, and data at startup."""
     global model, embeddings, df
 
-    model = SentenceTransformer("jhgan/ko-sbert-sts")
+    # Load Korean sentence embedding model
+    model = SentenceTransformer(MODEL_NAME)
     embeddings = np.load(DATA_DIR / "embeddings.npy")
     df = pd.read_csv(CSV_PATH)
+
+    # Validate embedding dimensions match model
+    expected_dim = 768
+    if embeddings.shape[1] != expected_dim:
+        raise ValueError(
+            f"Embedding dimension mismatch: expected {expected_dim}, got {embeddings.shape[1]}. "
+            "Please regenerate embeddings with: python scripts/generate_embeddings.py"
+        )
 
 
 def get_locations() -> dict:
@@ -33,7 +44,9 @@ def get_locations() -> dict:
     return {"sido": sorted(sido_list), "sigungu": sigungu_map}
 
 
-def search(query: str, sido: str | None = None, sigungu: str | None = None, top_k: int = 5) -> list[dict]:
+def search(
+    query: str, sido: str | None = None, sigungu: str | None = None, top_k: int = 10
+) -> list[dict]:
     """Search for similar waste disposal items."""
     if model is None or embeddings is None or df is None:
         raise RuntimeError("Resources not loaded")
@@ -55,7 +68,7 @@ def search(query: str, sido: str | None = None, sigungu: str | None = None, top_
     # Get embeddings for filtered items
     filtered_embeddings = embeddings[filtered_indices]
 
-    # Encode query
+    # Encode query using KR-SBERT
     query_embedding = model.encode([query])
 
     # Calculate cosine similarity
@@ -68,14 +81,18 @@ def search(query: str, sido: str | None = None, sigungu: str | None = None, top_
     for idx in top_indices:
         original_idx = filtered_indices[idx]
         row = df.iloc[original_idx]
-        results.append({
-            "name": row["대형폐기물명"],
-            "category": row["대형폐기물구분명"],
-            "spec": row["대형폐기물규격"] if pd.notna(row["대형폐기물규격"]) else "",
-            "fee": int(row["수수료"]) if pd.notna(row["수수료"]) else 0,
-            "similarity": float(similarities[idx]),
-            "sido": row["시도명"],
-            "sigungu": row["시군구명"],
-        })
+        results.append(
+            {
+                "name": row["대형폐기물명"],
+                "category": row["대형폐기물구분명"],
+                "spec": (
+                    row["대형폐기물규격"] if pd.notna(row["대형폐기물규격"]) else ""
+                ),
+                "fee": int(row["수수료"]) if pd.notna(row["수수료"]) else 0,
+                "similarity": float(similarities[idx]),
+                "sido": row["시도명"],
+                "sigungu": row["시군구명"],
+            }
+        )
 
     return results
