@@ -2,6 +2,12 @@
 
 ## 2026-01-19
 
+### data: merge 용산구 waste fee data from external source
+
+- `waste_disposal_fee.csv`: Merge entries from 용산구 external dataset
+  - Net additions: 24 new rows after deduplication
+  - 용산구 total entries: 367 → 391
+
 ### fix(docs): resolve documentation inconsistencies and cleanup
 
 - `PRD.md`: Update text format to structured format with labels (`품목: <대형폐기물명> | 구분: <대형폐기물구분명>`), update result count from 5 to 10
