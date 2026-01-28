@@ -1,12 +1,18 @@
 import numpy as np
 import pandas as pd
+import logging
+import time
 from sentence_transformers import SentenceTransformer
 from pathlib import Path
 from sklearn.metrics.pairwise import cosine_similarity
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
-CSV_PATH = BASE_DIR.parent / "waste_disposal_fee.csv"
+CSV_PATH = BASE_DIR / "waste_disposal_fee.csv"
 
 MODEL_NAME = "jhgan/ko-sroberta-multitask"
 
@@ -19,18 +25,39 @@ def load_resources():
     """Load model, embeddings, and data at startup."""
     global model, embeddings, df
 
-    # Load Korean sentence embedding model
-    model = SentenceTransformer(MODEL_NAME)
-    embeddings = np.load(DATA_DIR / "embeddings.npy")
-    df = pd.read_csv(CSV_PATH)
+    start_time = time.time()
+    logger.info(f"Loading resources from {BASE_DIR}...")
 
-    # Validate embedding dimensions match model
-    expected_dim = 768
-    if embeddings.shape[1] != expected_dim:
-        raise ValueError(
-            f"Embedding dimension mismatch: expected {expected_dim}, got {embeddings.shape[1]}. "
-            "Please regenerate embeddings with: python scripts/generate_embeddings.py"
-        )
+    try:
+        # Load Korean sentence embedding model
+        model = SentenceTransformer(MODEL_NAME)
+        
+        embeddings_path = DATA_DIR / "embeddings.npy"
+        if not embeddings_path.exists():
+            raise FileNotFoundError(f"Embeddings not found at {embeddings_path}. Please run generate_embeddings.py first.")
+        
+        embeddings = np.load(embeddings_path)
+        
+        if not CSV_PATH.exists():
+            raise FileNotFoundError(f"CSV data not found at {CSV_PATH}")
+            
+        # Using utf-8-sig to handle Korean characters and potential BOM
+        df = pd.read_csv(CSV_PATH, encoding="utf-8-sig")
+
+        # Validate embedding dimensions match model
+        expected_dim = 768
+        if embeddings.shape[1] != expected_dim:
+            raise ValueError(
+                f"Embedding dimension mismatch: expected {expected_dim}, got {embeddings.shape[1]}. "
+                "Please regenerate embeddings with: python scripts/generate_embeddings.py"
+            )
+        
+        elapsed = time.time() - start_time
+        logger.info(f"Resources loaded successfully in {elapsed:.2f} seconds. Items: {len(df)}")
+
+    except Exception as e:
+        logger.error(f"Failed to load resources: {str(e)}")
+        raise
 
 
 def get_locations() -> dict:

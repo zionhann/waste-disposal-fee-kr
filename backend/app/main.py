@@ -1,26 +1,28 @@
-from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from mangum import Mangum
 
 from app.models import SearchRequest, SearchResponse, SearchResult
 from app import search as search_module
 
+app = FastAPI(title="Waste Disposal Search API")
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    search_module.load_resources()
-    yield
-
-
-app = FastAPI(title="Waste Disposal Search API", lifespan=lifespan)
+# Load resources at startup (outside handler for Lambda Warm Start)
+search_module.load_resources()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/")
+def root():
+    """Health check endpoint."""
+    return {"status": "ok", "message": "Waste Disposal API is running"}
 
 
 @app.get("/api/locations")
@@ -40,3 +42,7 @@ def search(request: SearchRequest):
     return SearchResponse(
         results=[SearchResult(**r) for r in results]
     )
+
+
+# AWS Lambda handler
+handler = Mangum(app, lifespan="off")

@@ -11,14 +11,14 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
-CSV_PATH = BASE_DIR.parent / "waste_disposal_fee.csv"
+CSV_PATH = BASE_DIR / "waste_disposal_fee.csv"
 
 MODEL_NAME = "jhgan/ko-sroberta-multitask"
 
 
 def main():
     print("Loading data...")
-    df = pd.read_csv(CSV_PATH)
+    df = pd.read_csv(CSV_PATH, encoding="utf-8-sig")
     print(f"Loaded {len(df)} items")
 
     # Preprocess: create structured text with labeled fields
