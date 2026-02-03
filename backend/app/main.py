@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.models import SearchResponse
 from app import search as search_module
@@ -42,6 +43,9 @@ def search(
     sigungu: str | None = Query(default=None),
 ):
     """Search for waste disposal items by similarity."""
-    return {"results": search_module.search(
-        query=query, sido=sido, sigungu=sigungu,
-    )}
+    return JSONResponse(
+        content={"results": search_module.search(
+            query=query, sido=sido, sigungu=sigungu,
+        )},
+        headers={"Cache-Control": "no-store"},
+    )

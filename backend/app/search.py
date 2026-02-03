@@ -82,8 +82,9 @@ def search(
     if not indices:
         return []
 
+    query_sentence = f"{query}를 버리려고 합니다"
     similarities = (
-        model.encode([query], normalize_embeddings=True) @ embeddings[indices].T
+        model.encode([query_sentence], normalize_embeddings=True) @ embeddings[indices].T
     )[0]
 
     top = np.argsort(similarities)[-top_k:][::-1]

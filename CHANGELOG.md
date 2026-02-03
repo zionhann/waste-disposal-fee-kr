@@ -98,6 +98,15 @@
   - Change `POST /api/search` → `GET /api/search`
   - Replace "Request Body" JSON block with a "Query Parameters" table (`query` required, `sido` / `sigungu` optional)
 
+### fix(search): resolve identical results for different short keywords
+
+- `backend/app/search.py`: Wrap raw query in a natural Korean sentence before encoding
+  - Add `query_sentence = f"{query}를 버리려고 합니다"` before `model.encode()` to match the register the sentence-transformer was trained on; bare short keywords collapsed into a narrow cone of embedding space causing near-identical similarity vectors
+- `frontend/src/App.tsx`: Guard against duplicate in-flight requests
+  - Add `loading` check to the existing early-return (`if (!query.trim() || loading) return`) so Enter key cannot re-submit the form while a request is pending
+- `backend/app/main.py`: Return `Cache-Control: no-store` on `/api/search`
+  - Switch from implicit dict return to `JSONResponse` with the header to prevent any browser heuristic caching on repeated GET requests
+
 ## 2026-01-19
 
 ### data: merge 용산구 waste fee data from external source
