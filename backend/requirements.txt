@@ -1,0 +1,4 @@
+fastapi[standard]>=0.109.0
+sentence-transformers>=2.2.2
+numpy>=1.26.0
+pandas>=2.1.0

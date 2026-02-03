@@ -1,0 +1,6 @@
+**/__pycache__
+**/*.npy
+
+.gemini/
+gha-creds-*.json
+.env
