@@ -26,7 +26,7 @@ function App() {
 
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    if (!query.trim() || loading) return;
 
     setLoading(true);
     setError("");
