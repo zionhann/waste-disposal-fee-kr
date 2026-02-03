@@ -1,28 +1,50 @@
-FROM public.ecr.aws/lambda/python:3.11
+FROM python:3.11-slim-bookworm AS builder
 
-# Set environment variables
-# We store models in the task root so they are part of the image and don't need downloading at runtime
-ENV HF_HOME=${LAMBDA_TASK_ROOT}/.cache/huggingface \
-    TORCH_HOME=${LAMBDA_TASK_ROOT}/.cache/torch \
-    PYTHONPATH=${LAMBDA_TASK_ROOT}
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential && rm -rf /var/lib/apt/lists/*
 
-WORKDIR ${LAMBDA_TASK_ROOT}
+WORKDIR /build
 
-# Install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --user -r requirements.txt
 
-# Copy application code and data
-COPY app/ app/
-COPY scripts/ scripts/
+ENV HF_HOME=/build/.cache/huggingface \
+    TORCH_HOME=/build/.cache/torch \
+    PYTHONPATH=/build
+
+# Isolated layer: model cache survives script/data changes
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('jhgan/ko-sroberta-multitask')"
+
+COPY scripts/generate_embeddings.py scripts/generate_embeddings.py
 COPY waste_disposal_fee.csv .
-
-# Create data directory
-RUN mkdir -p data
-
-# Download model and generate embeddings during build
-RUN python scripts/download_model.py
 RUN python scripts/generate_embeddings.py
 
-# Set the CMD to the handler
-CMD ["app.main.handler"]
+# App source last — changes most frequently
+COPY app/ app/
+
+# Runtime
+FROM python:3.11-slim-bookworm
+
+RUN useradd --create-home --shell /bin/bash appuser
+
+WORKDIR /app
+
+COPY --from=builder --chown=appuser:appuser /root/.local /home/appuser/.local
+COPY --from=builder --chown=appuser:appuser /build/app ./app
+COPY --from=builder --chown=appuser:appuser /build/data ./data
+COPY --from=builder --chown=appuser:appuser /build/.cache ./.cache
+COPY --from=builder --chown=appuser:appuser /build/waste_disposal_fee.csv .
+
+ENV PATH=/home/appuser/.local/bin:$PATH \
+    HF_HOME=/app/.cache/huggingface \
+    TORCH_HOME=/app/.cache/torch \
+    PYTHONPATH=/app
+
+USER appuser
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/', timeout=5)"
+
+CMD ["fastapi", "run", "app/main.py", "--host", "0.0.0.0", "--port", "8000"]

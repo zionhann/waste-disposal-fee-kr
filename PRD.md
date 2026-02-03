@@ -74,17 +74,16 @@
 ### 검색 엔드포인트
 
 ```
-POST /api/search
+GET /api/search
 ```
 
-**Request Body**
-```json
-{
-  "query": "티비",
-  "sido": "서울특별시",
-  "sigungu": "강남구"
-}
-```
+**Query Parameters**
+
+| 파라미터 | 필수 여부 | 설명 |
+|----------|-----------|------|
+| `query` | 필수 | 검색어 |
+| `sido` | 선택 | 시도명 |
+| `sigungu` | 선택 | 시군구명 |
 
 **Response**
 ```json

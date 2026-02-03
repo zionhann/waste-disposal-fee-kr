@@ -32,7 +32,7 @@ def main():
     model = SentenceTransformer(MODEL_NAME)
 
     print("Generating embeddings...")
-    embeddings = model.encode(texts, show_progress_bar=True)
+    embeddings = model.encode(texts, show_progress_bar=True, normalize_embeddings=True)
 
     # Save embeddings
     DATA_DIR.mkdir(exist_ok=True)
