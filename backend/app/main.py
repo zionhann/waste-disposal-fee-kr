@@ -1,21 +1,25 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from mangum import Mangum
+from contextlib import asynccontextmanager
 
-from app.models import SearchRequest, SearchResponse, SearchResult
+from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.models import SearchResponse
 from app import search as search_module
 
-app = FastAPI(title="Waste Disposal Search API")
 
-# Load resources at startup (outside handler for Lambda Warm Start)
-search_module.load_resources()
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    search_module.load_resources()
+    yield
+
+
+app = FastAPI(title="Waste Disposal Search API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET"],
+    allow_headers=["Content-Type"],
 )
 
 
@@ -31,18 +35,13 @@ def get_locations():
     return search_module.get_locations()
 
 
-@app.post("/api/search", response_model=SearchResponse)
-def search(request: SearchRequest):
+@app.get("/api/search", response_model=SearchResponse)
+def search(
+    query: str = Query(...),
+    sido: str | None = Query(default=None),
+    sigungu: str | None = Query(default=None),
+):
     """Search for waste disposal items by similarity."""
-    results = search_module.search(
-        query=request.query,
-        sido=request.sido,
-        sigungu=request.sigungu,
-    )
-    return SearchResponse(
-        results=[SearchResult(**r) for r in results]
-    )
-
-
-# AWS Lambda handler
-handler = Mangum(app, lifespan="off")
+    return {"results": search_module.search(
+        query=query, sido=sido, sigungu=sigungu,
+    )}
