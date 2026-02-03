@@ -11,6 +11,7 @@ function App() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
 
   useEffect(() => {
     fetchLocations()
@@ -29,6 +30,7 @@ function App() {
 
     setLoading(true);
     setError("");
+    setHasSearched(true);
     try {
       const response = await searchItems(query, sido, sigungu);
       setResults(response.results);
@@ -92,7 +94,20 @@ function App() {
         </div>
       </form>
 
-      {error && <p className="error">{error}</p>}
+      {error && (
+        <div className="error">
+          {error}
+        </div>
+      )}
+
+      {hasSearched && results.length === 0 && !loading && !error && (
+        <div className="results">
+          <div className="empty-state">
+            <div className="empty-state-icon">🔍</div>
+            <p>검색 결과가 없습니다.</p>
+          </div>
+        </div>
+      )}
 
       {results.length > 0 && (
         <div className="results">
