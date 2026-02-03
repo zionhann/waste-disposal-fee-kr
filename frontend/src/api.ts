@@ -1,6 +1,6 @@
 import type { LocationsResponse, SearchResponse } from "./types";
 
-const API_BASE = import.meta.env.VITE_API_BASE;
+const API_BASE = (import.meta.env.VITE_API_BASE ?? "").replace(/\/+$/, "");
 
 export async function fetchLocations(): Promise<LocationsResponse> {
   const res = await fetch(`${API_BASE}/api/locations`);

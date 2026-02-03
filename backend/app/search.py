@@ -40,6 +40,12 @@ def load_resources():
         df["대형폐기물규격"] = df["대형폐기물규격"].fillna("")
         df["수수료"] = df["수수료"].fillna(0).astype(int)
 
+        if embeddings.shape[0] != len(df):
+            raise ValueError(
+                f"Row count mismatch: {embeddings.shape[0]} embeddings vs {len(df)} CSV rows "
+                f"(embeddings: {embeddings_path}, csv: {CSV_PATH})"
+            )
+
         if embeddings.shape[1] != 768:
             raise ValueError(f"Embedding dim mismatch: expected 768, got {embeddings.shape[1]}")
 

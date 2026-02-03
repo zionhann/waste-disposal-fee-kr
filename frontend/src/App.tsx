@@ -35,6 +35,7 @@ function App() {
       const response = await searchItems(query, sido, sigungu);
       setResults(response.results);
     } catch {
+      setResults([]);
       setError("검색에 실패했습니다.");
     } finally {
       setLoading(false);
@@ -113,8 +114,8 @@ function App() {
         <div className="results">
           <h2>검색 결과</h2>
           <ul className="result-list">
-            {results.map((item, idx) => (
-              <li key={idx} className="result-item">
+            {results.map((item) => (
+              <li key={`${item.name}-${item.sido}-${item.sigungu}-${item.category}-${item.spec}`} className="result-item">
                 <div className="result-header">
                   <span className="item-name">{item.name}</span>
                   <span className="similarity">
