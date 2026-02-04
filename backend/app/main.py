@@ -1,5 +1,7 @@
+import json
 import logging
 import sys
+import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -22,6 +24,10 @@ _app_logger.addHandler(_stream_handler)
 
 logger = logging.getLogger(__name__)
 
+COUNTS_FILE = LOG_DIR / "history.json"
+_counts: dict[str, dict[str, int]] = {"queries": {}, "sido": {}, "sigungu": {}}
+_counts_lock = threading.Lock()
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -33,6 +39,18 @@ async def lifespan(_app: FastAPI):
         logger.addHandler(file_handler)
     except Exception as e:
         logger.error("Failed to configure query log file %s: %s", LOG_FILE, e)
+    try:
+        if COUNTS_FILE.exists():
+            raw = json.loads(COUNTS_FILE.read_text(encoding="utf-8"))
+            for section in _counts:
+                for entry in raw.get(section, []):
+                    _counts[section].update(entry)
+    except Exception as e:
+        for section in _counts.values():
+            section.clear()
+        logger.warning(
+            "Failed to load query counts from %s, starting fresh: %s", COUNTS_FILE, e
+        )
     yield
 
 
@@ -69,6 +87,24 @@ def log_query(query: str, sido: str | None, sigungu: str | None, results: list[d
     )
 
 
+def record_query(query: str, sido: str | None, sigungu: str | None):
+    with _counts_lock:
+        for key, value in [("queries", query), ("sido", sido), ("sigungu", sigungu)]:
+            if value is not None:
+                _counts[key][value] = _counts[key].get(value, 0) + 1
+        COUNTS_FILE.write_text(
+            json.dumps(
+                {
+                    section: [{k: v} for k, v in counts.items()]
+                    for section, counts in _counts.items()
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+
 @app.get("/api/search", response_model=SearchResponse)
 def search(
     query: str = Query(...),
@@ -78,6 +114,7 @@ def search(
     """Search for waste disposal items by similarity."""
     results = search_module.search(query=query, sido=sido, sigungu=sigungu)
     log_query(query, sido, sigungu, results)
+    record_query(query, sido, sigungu)
     return JSONResponse(
         content={"results": results},
         headers={"Cache-Control": "no-store"},

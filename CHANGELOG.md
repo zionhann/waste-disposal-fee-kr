@@ -29,6 +29,14 @@
   - Replace JSON-serialised `log_query()` with a single `logger.info()` using %-style lazy formatting; drop now-unused `json` and `datetime` imports, add `sys`
 - `backend/Dockerfile`: Set `PYTHONUNBUFFERED=1` in the runtime `ENV` block so Python flushes stdout on every write instead of buffering until the process exits or the buffer fills (always the case when stdout is not a TTY, i.e. inside a container)
 
+### feat(logging): add per-field query count persistence to `logs/history.json`
+
+- `backend/app/main.py`: Record and persist independent counters for `query`, `sido`, and `sigungu` on every `/api/search` hit
+  - Add `json` and `threading` imports; introduce module-level `_counts` dict and `_counts_lock` to guard concurrent mutation from uvicorn's threadpool
+  - Load persisted counts from `logs/history.json` during lifespan startup; clear all sections and log a warning on any parse failure so the app continues on a corrupt file
+  - Add `record_query()`: increments the relevant counters under the lock, then atomically serialises the entire state back to disk as an array-of-single-key-objects per section; `sido`/`sigungu` entries are only written when the filter was actually provided
+  - Call `record_query()` in the `search` endpoint immediately after `log_query()`
+
 ## 2026-02-03
 
 ### feat(deploy): migrate from AWS Lambda to OCI A1 (ARM64) with Gunicorn
