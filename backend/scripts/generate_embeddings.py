@@ -21,8 +21,9 @@ def main():
     df = pd.read_csv(CSV_PATH, encoding="utf-8-sig")
     print(f"Loaded {len(df)} items")
 
-    # Preprocess: use item name directly
+    # Preprocess: use item name directly, drop rows with missing names
     print("Preprocessing...")
+    df = df.dropna(subset=["대형폐기물명"])
     texts = df["대형폐기물명"].astype(str).tolist()
 
     print(f"Loading model ({MODEL_NAME})...")

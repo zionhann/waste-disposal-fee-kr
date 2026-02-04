@@ -27,6 +27,7 @@ function App() {
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
     if (!query.trim()) {
+      setResults([]);
       setError("검색어를 입력해주세요.");
       return;
     }

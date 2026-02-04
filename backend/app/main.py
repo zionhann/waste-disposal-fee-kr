@@ -19,6 +19,13 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     search_module.load_resources()
+    try:
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8", errors="replace")
+        file_handler.setFormatter(logging.Formatter("%(message)s"))
+        logger.addHandler(file_handler)
+    except Exception as e:
+        logger.error("Failed to configure query log file %s: %s", LOG_FILE, e)
     yield
 
 
@@ -45,7 +52,6 @@ def get_locations():
 
 
 def log_query(query: str, sido: str | None, sigungu: str | None, result_count: int):
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
     record = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "query": query,
@@ -53,10 +59,7 @@ def log_query(query: str, sido: str | None, sigungu: str | None, result_count: i
         "sigungu": sigungu,
         "result_count": result_count,
     }
-    log_line = json.dumps(record, ensure_ascii=False)
-    logger.info(log_line)
-    with open(LOG_FILE, "a") as f:
-        f.write(log_line + "\n")
+    logger.info(json.dumps(record, ensure_ascii=False))
 
 
 @app.get("/api/search", response_model=SearchResponse)
