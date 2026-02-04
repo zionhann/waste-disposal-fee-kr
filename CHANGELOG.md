@@ -21,6 +21,14 @@
   - Collapse single-line error `<div>` for readability
 - `SPEC.md`: Update preprocessing format docs to match raw item-name pipeline
 
+### fix(logging): route query logs to stdout and enable Docker log visibility
+
+- `backend/app/main.py`: Fix two-layer logging misconfiguration that silenced all query records
+  - Configure the shared `"app"` package logger at `INFO` level with a `StreamHandler(stdout)` — child loggers `app.main` and `app.search` inherit both the level and the handler via propagation, replacing the previous per-module `NOTSET` default that resolved to the root logger's `WARNING`
+  - Switch log file from `query_log.jsonl` to `query.log` with a shared `LOG_FORMAT` (`%(asctime)s [%(levelname)s] %(message)s`); apply the same formatter to the existing `FileHandler` so stdout and file output are identical
+  - Replace JSON-serialised `log_query()` with a single `logger.info()` using %-style lazy formatting; drop now-unused `json` and `datetime` imports, add `sys`
+- `backend/Dockerfile`: Set `PYTHONUNBUFFERED=1` in the runtime `ENV` block so Python flushes stdout on every write instead of buffering until the process exits or the buffer fills (always the case when stdout is not a TTY, i.e. inside a container)
+
 ## 2026-02-03
 
 ### feat(deploy): migrate from AWS Lambda to OCI A1 (ARM64) with Gunicorn

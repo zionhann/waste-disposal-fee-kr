@@ -1,7 +1,6 @@
-import json
 import logging
+import sys
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, Query
@@ -12,7 +11,15 @@ from app.models import SearchResponse
 from app import search as search_module
 
 LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
-LOG_FILE = LOG_DIR / "query_log.jsonl"
+LOG_FILE = LOG_DIR / "query.log"
+LOG_FORMAT = "%(asctime)s [%(levelname)s] %(message)s"
+
+_app_logger = logging.getLogger("app")
+_app_logger.setLevel(logging.INFO)
+_stream_handler = logging.StreamHandler(sys.stdout)
+_stream_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+_app_logger.addHandler(_stream_handler)
+
 logger = logging.getLogger(__name__)
 
 
@@ -22,7 +29,7 @@ async def lifespan(_app: FastAPI):
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)
         file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8", errors="replace")
-        file_handler.setFormatter(logging.Formatter("%(message)s"))
+        file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
         logger.addHandler(file_handler)
     except Exception as e:
         logger.error("Failed to configure query log file %s: %s", LOG_FILE, e)
@@ -51,15 +58,15 @@ def get_locations():
     return search_module.get_locations()
 
 
-def log_query(query: str, sido: str | None, sigungu: str | None, result_count: int):
-    record = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "query": query,
-        "sido": sido,
-        "sigungu": sigungu,
-        "result_count": result_count,
-    }
-    logger.info(json.dumps(record, ensure_ascii=False))
+def log_query(query: str, sido: str | None, sigungu: str | None, results: list[dict]):
+    top_names = ", ".join(r["name"] for r in results[:5])
+    logger.info(
+        'query="%s" sido=%s sigungu=%s results=[%s]',
+        query,
+        sido or "-",
+        sigungu or "-",
+        top_names,
+    )
 
 
 @app.get("/api/search", response_model=SearchResponse)
@@ -70,7 +77,7 @@ def search(
 ):
     """Search for waste disposal items by similarity."""
     results = search_module.search(query=query, sido=sido, sigungu=sigungu)
-    log_query(query, sido, sigungu, len(results))
+    log_query(query, sido, sigungu, results)
     return JSONResponse(
         content={"results": results},
         headers={"Cache-Control": "no-store"},
