@@ -37,6 +37,7 @@ def load_resources():
         if not CSV_PATH.exists():
             raise FileNotFoundError(f"CSV not found at {CSV_PATH}")
         df = pd.read_csv(CSV_PATH, encoding="utf-8-sig")
+        df = df.dropna(subset=["대형폐기물명"])
         df["대형폐기물규격"] = df["대형폐기물규격"].fillna("")
         df["수수료"] = df["수수료"].fillna(0).astype(int)
 
@@ -48,10 +49,6 @@ def load_resources():
 
         if embeddings.shape[1] != 768:
             raise ValueError(f"Embedding dim mismatch: expected 768, got {embeddings.shape[1]}")
-
-        # Normalize embeddings to ensure cosine similarity is correct
-        norm = np.linalg.norm(embeddings, axis=1, keepdims=True)
-        embeddings = embeddings / (norm + 1e-9)
 
         logger.info(f"Loaded {len(df)} items in {time.time() - t0:.2f}s")
     except Exception as e:

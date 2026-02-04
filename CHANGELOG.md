@@ -37,6 +37,20 @@
   - Add `record_query()`: increments the relevant counters under the lock, then atomically serialises the entire state back to disk as an array-of-single-key-objects per section; `sido`/`sigungu` entries are only written when the filter was actually provided
   - Call `record_query()` in the `search` endpoint immediately after `log_query()`
 
+### fix(logging): remove ephemeral FileHandler, keep stdout-only logging
+
+- `backend/app/query_log.py`: Strip the `FileHandler` that wrote to `logs/query.log` inside the container
+  - Remove `_LOG_FILE` and `_LOG_FORMAT` module constants (only consumers were the deleted handler)
+  - Replace the FileHandler `try/except` block in `setup()` with a bare `_LOG_DIR.mkdir(parents=True, exist_ok=True)` — the directory is still required by `_flush()` for `history.json`; no try/except because a failure here is a deployment error that should crash at startup
+  - Update `setup()` docstring to "Load persisted query counts."
+  - `_logger.info` in `log_query` is unchanged; it propagates to the `app` stdout handler configured in `main.py`
+
+### style(logging): split over-length comprehension in `record_query`
+
+- `backend/app/query_log.py`: Extract inline dict literal into a `raw` variable before the sanitise comprehension
+  - The single-expression `fields = {k: _sanitize(v) for k, v in {"queries": …}.items() …}` was 121 chars; split into `raw` (the section-keyed dict) and `fields` (the filtered, sanitised copy)
+  - `raw` mirrors the name already used in `setup()` for the same shape of dict, giving the module a consistent vocabulary
+
 ## 2026-02-03
 
 ### feat(deploy): migrate from AWS Lambda to OCI A1 (ARM64) with Gunicorn
