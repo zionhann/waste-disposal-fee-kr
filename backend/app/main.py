@@ -43,8 +43,7 @@ async def lifespan(_app: FastAPI):
         if COUNTS_FILE.exists():
             raw = json.loads(COUNTS_FILE.read_text(encoding="utf-8"))
             for section in _counts:
-                for entry in raw.get(section, []):
-                    _counts[section].update(entry)
+                _counts[section].update(raw.get(section, {}))
     except Exception as e:
         for section in _counts.values():
             section.clear()
@@ -76,33 +75,36 @@ def get_locations():
     return search_module.get_locations()
 
 
+def _sanitize(value: str | None) -> str:
+    """Remove newline and carriage return characters to prevent log injection."""
+    if value is None:
+        return "-"
+    return value.replace("\n", "").replace("\r", "")
+
+
 def log_query(query: str, sido: str | None, sigungu: str | None, results: list[dict]):
+    """Log search query and top results to the query log."""
     top_names = ", ".join(r["name"] for r in results[:5])
     logger.info(
         'query="%s" sido=%s sigungu=%s results=[%s]',
-        query,
-        sido or "-",
-        sigungu or "-",
+        _sanitize(query),
+        _sanitize(sido),
+        _sanitize(sigungu),
         top_names,
     )
 
 
 def record_query(query: str, sido: str | None, sigungu: str | None):
+    """Record query counts and persist to history file."""
     with _counts_lock:
         for key, value in [("queries", query), ("sido", sido), ("sigungu", sigungu)]:
             if value is not None:
                 _counts[key][value] = _counts[key].get(value, 0) + 1
-        COUNTS_FILE.write_text(
-            json.dumps(
-                {
-                    section: [{k: v} for k, v in counts.items()]
-                    for section, counts in _counts.items()
-                },
-                ensure_ascii=False,
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
+        snapshot = {section: dict(counts) for section, counts in _counts.items()}
+    COUNTS_FILE.write_text(
+        json.dumps(snapshot, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
 
 @app.get("/api/search", response_model=SearchResponse)
