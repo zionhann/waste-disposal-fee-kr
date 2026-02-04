@@ -49,6 +49,10 @@ def load_resources():
         if embeddings.shape[1] != 768:
             raise ValueError(f"Embedding dim mismatch: expected 768, got {embeddings.shape[1]}")
 
+        # Normalize embeddings to ensure cosine similarity is correct
+        norm = np.linalg.norm(embeddings, axis=1, keepdims=True)
+        embeddings = embeddings / (norm + 1e-9)
+
         logger.info(f"Loaded {len(df)} items in {time.time() - t0:.2f}s")
     except Exception as e:
         logger.error(f"Failed to load resources: {e}")
@@ -82,10 +86,9 @@ def search(
     if not indices:
         return []
 
-    query_sentence = f"{query}를 버리려고 합니다"
-    similarities = (
-        model.encode([query_sentence], normalize_embeddings=True) @ embeddings[indices].T
-    )[0]
+    query_emb = model.encode(query, normalize_embeddings=True)
+    item_embs = embeddings[indices]
+    similarities = item_embs @ query_emb
 
     top = np.argsort(similarities)[-top_k:][::-1]
 

@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-02-04
+
+### feat(logging): echo query log to console and fix Docker logs directory ownership
+
+- `backend/app/main.py`: Mirror every search record to the Uvicorn console via stdlib `logging`
+  - Add `import logging` and module-level `logger = logging.getLogger(__name__)`
+  - Serialise `record` once into `log_line`; reuse it for both `logger.info()` and the `.jsonl` file write
+- `backend/Dockerfile`: Harden runtime stage for non-root writes and cold-start timing
+  - `chown appuser:appuser /app` so the working directory itself is owned by `appuser`; makes `main.py`'s defensive `mkdir(parents=True)` actually work as a fallback
+  - `mkdir -p /app/logs` with correct ownership so `appuser` can write `query_log.jsonl` without a runtime mkdir
+  - Increase `HEALTHCHECK --start-period` from 60 s to 120 s; model deserialisation on cold CPU can exceed 60 s, leaving zero margin before retries begin
+
+### fix(frontend): restore unique list keys and add empty-query validation
+
+- `frontend/src/App.tsx`: Fix duplicate React keys in search result list
+  - The CSV contains ~12k rows that are identical across name, sido, sigungu, category, and spec; the previous composite key collided on those duplicates
+  - Restore full composite key (`name-category-sido-sigungu`) and append map `index` as a tiebreaker — keeps keys stable across re-renders while guaranteeing uniqueness
+  - Split empty-input guard into its own branch so users see a validation message ("검색어를 입력해주세요.") instead of a silent no-op
+  - Collapse single-line error `<div>` for readability
+- `SPEC.md`: Update preprocessing format docs to match raw item-name pipeline
+
 ## 2026-02-03
 
 ### feat(deploy): migrate from AWS Lambda to OCI A1 (ARM64) with Gunicorn

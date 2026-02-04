@@ -4,3 +4,4 @@
 .gemini/
 gha-creds-*.json
 .env
+backend/logs/
