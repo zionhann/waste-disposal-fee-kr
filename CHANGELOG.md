@@ -21,6 +21,36 @@
   - Collapse single-line error `<div>` for readability
 - `SPEC.md`: Update preprocessing format docs to match raw item-name pipeline
 
+### fix(logging): route query logs to stdout and enable Docker log visibility
+
+- `backend/app/main.py`: Fix two-layer logging misconfiguration that silenced all query records
+  - Configure the shared `"app"` package logger at `INFO` level with a `StreamHandler(stdout)` — child loggers `app.main` and `app.search` inherit both the level and the handler via propagation, replacing the previous per-module `NOTSET` default that resolved to the root logger's `WARNING`
+  - Switch log file from `query_log.jsonl` to `query.log` with a shared `LOG_FORMAT` (`%(asctime)s [%(levelname)s] %(message)s`); apply the same formatter to the existing `FileHandler` so stdout and file output are identical
+  - Replace JSON-serialised `log_query()` with a single `logger.info()` using %-style lazy formatting; drop now-unused `json` and `datetime` imports, add `sys`
+- `backend/Dockerfile`: Set `PYTHONUNBUFFERED=1` in the runtime `ENV` block so Python flushes stdout on every write instead of buffering until the process exits or the buffer fills (always the case when stdout is not a TTY, i.e. inside a container)
+
+### feat(logging): add per-field query count persistence to `logs/history.json`
+
+- `backend/app/main.py`: Record and persist independent counters for `query`, `sido`, and `sigungu` on every `/api/search` hit
+  - Add `json` and `threading` imports; introduce module-level `_counts` dict and `_counts_lock` to guard concurrent mutation from uvicorn's threadpool
+  - Load persisted counts from `logs/history.json` during lifespan startup; clear all sections and log a warning on any parse failure so the app continues on a corrupt file
+  - Add `record_query()`: increments the relevant counters under the lock, then atomically serialises the entire state back to disk as an array-of-single-key-objects per section; `sido`/`sigungu` entries are only written when the filter was actually provided
+  - Call `record_query()` in the `search` endpoint immediately after `log_query()`
+
+### fix(logging): remove ephemeral FileHandler, keep stdout-only logging
+
+- `backend/app/query_log.py`: Strip the `FileHandler` that wrote to `logs/query.log` inside the container
+  - Remove `_LOG_FILE` and `_LOG_FORMAT` module constants (only consumers were the deleted handler)
+  - Replace the FileHandler `try/except` block in `setup()` with a bare `_LOG_DIR.mkdir(parents=True, exist_ok=True)` — the directory is still required by `_flush()` for `history.json`; no try/except because a failure here is a deployment error that should crash at startup
+  - Update `setup()` docstring to "Load persisted query counts."
+  - `_logger.info` in `log_query` is unchanged; it propagates to the `app` stdout handler configured in `main.py`
+
+### style(logging): split over-length comprehension in `record_query`
+
+- `backend/app/query_log.py`: Extract inline dict literal into a `raw` variable before the sanitise comprehension
+  - The single-expression `fields = {k: _sanitize(v) for k, v in {"queries": …}.items() …}` was 121 chars; split into `raw` (the section-keyed dict) and `fields` (the filtered, sanitised copy)
+  - `raw` mirrors the name already used in `setup()` for the same shape of dict, giving the module a consistent vocabulary
+
 ## 2026-02-03
 
 ### feat(deploy): migrate from AWS Lambda to OCI A1 (ARM64) with Gunicorn

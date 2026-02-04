@@ -117,7 +117,7 @@ function App() {
           <ul className="result-list">
             {results.map((item, index) => (
               <li
-                key={`${item.name}-${item.category}-${item.sido}-${item.sigungu}-${index}`}
+                key={`${item.name}-${item.category}-${item.sigungu}-${item.sido}-${index}`}
                 className="result-item"
               >
                 <div className="result-header">

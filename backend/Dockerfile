@@ -38,7 +38,8 @@ COPY --from=builder --chown=appuser:appuser /build/waste_disposal_fee.csv .
 ENV PATH=/home/appuser/.local/bin:$PATH \
     HF_HOME=/app/.cache/huggingface \
     TORCH_HOME=/app/.cache/torch \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    PYTHONUNBUFFERED=1
 
 RUN chown appuser:appuser /app && mkdir -p /app/logs && chown appuser:appuser /app/logs
 
