@@ -40,11 +40,13 @@ ENV PATH=/home/appuser/.local/bin:$PATH \
     TORCH_HOME=/app/.cache/torch \
     PYTHONPATH=/app
 
+RUN chown appuser:appuser /app && mkdir -p /app/logs && chown appuser:appuser /app/logs
+
 USER appuser
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/', timeout=5)"
 
 CMD ["fastapi", "run", "app/main.py", "--host", "0.0.0.0", "--port", "8000"]

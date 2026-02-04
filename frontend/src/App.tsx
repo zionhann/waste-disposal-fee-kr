@@ -26,7 +26,12 @@ function App() {
 
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
-    if (!query.trim() || loading) return;
+    if (!query.trim()) {
+      setResults([]);
+      setError("검색어를 입력해주세요.");
+      return;
+    }
+    if (loading) return;
 
     setLoading(true);
     setError("");
@@ -95,11 +100,7 @@ function App() {
         </div>
       </form>
 
-      {error && (
-        <div className="error">
-          {error}
-        </div>
-      )}
+      {error && <div className="error">{error}</div>}
 
       {hasSearched && results.length === 0 && !loading && !error && (
         <div className="results">
@@ -114,8 +115,11 @@ function App() {
         <div className="results">
           <h2>검색 결과</h2>
           <ul className="result-list">
-            {results.map((item) => (
-              <li key={`${item.name}-${item.sido}-${item.sigungu}-${item.category}-${item.spec}`} className="result-item">
+            {results.map((item, index) => (
+              <li
+                key={`${item.name}-${item.category}-${item.sido}-${item.sigungu}-${index}`}
+                className="result-item"
+              >
                 <div className="result-header">
                   <span className="item-name">{item.name}</span>
                   <span className="similarity">

@@ -21,12 +21,10 @@ def main():
     df = pd.read_csv(CSV_PATH, encoding="utf-8-sig")
     print(f"Loaded {len(df)} items")
 
-    # Preprocess: create structured text with labeled fields
+    # Preprocess: use item name directly, drop rows with missing names
     print("Preprocessing...")
-    texts = df.apply(
-        lambda row: f"품목: {row['대형폐기물명']} | 구분: {row['대형폐기물구분명']}",
-        axis=1,
-    ).tolist()
+    df = df.dropna(subset=["대형폐기물명"])
+    texts = df["대형폐기물명"].astype(str).tolist()
 
     print(f"Loading model ({MODEL_NAME})...")
     model = SentenceTransformer(MODEL_NAME)
