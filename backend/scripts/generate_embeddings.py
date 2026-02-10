@@ -14,6 +14,7 @@ DATA_DIR = BASE_DIR / "data"
 CSV_PATH = BASE_DIR / "waste_disposal_fee.csv"
 
 MODEL_NAME = "jhgan/ko-sroberta-multitask"
+TEXT_TEMPLATE = "'{대형폐기물명}'은 {대형폐기물특징}입니다."
 
 
 def main():
@@ -24,7 +25,10 @@ def main():
     # Preprocess: use item name directly, drop rows with missing names
     print("Preprocessing...")
     df = df.dropna(subset=["대형폐기물명"])
-    texts = df["대형폐기물명"].astype(str).tolist()
+    print(f"Using text template: {TEXT_TEMPLATE}")
+    texts = []
+    for _, row in df.iterrows():
+        texts.append(TEXT_TEMPLATE.format(**{col: str(row[col]) for col in df.columns}))
 
     print(f"Loading model ({MODEL_NAME})...")
     model = SentenceTransformer(MODEL_NAME)

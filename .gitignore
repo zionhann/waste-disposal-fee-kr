@@ -5,3 +5,4 @@
 gha-creds-*.json
 .env
 backend/logs/
+.DS_Store
