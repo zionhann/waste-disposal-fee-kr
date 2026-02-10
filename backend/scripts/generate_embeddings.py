@@ -22,13 +22,14 @@ def main():
     df = pd.read_csv(CSV_PATH, encoding="utf-8-sig")
     print(f"Loaded {len(df)} items")
 
-    # Preprocess: use item name directly, drop rows with missing names
+    # Preprocess: drop rows with missing fields, then format via template
     print("Preprocessing...")
-    df = df.dropna(subset=["대형폐기물명"])
+    df = df.dropna(subset=["대형폐기물명", "대형폐기물특징"])
     print(f"Using text template: {TEXT_TEMPLATE}")
-    texts = []
-    for _, row in df.iterrows():
-        texts.append(TEXT_TEMPLATE.format(**{col: str(row[col]) for col in df.columns}))
+    texts = df.apply(
+        lambda row: TEXT_TEMPLATE.format(**row.astype(str)),
+        axis=1,
+    ).tolist()
 
     print(f"Loading model ({MODEL_NAME})...")
     model = SentenceTransformer(MODEL_NAME)
