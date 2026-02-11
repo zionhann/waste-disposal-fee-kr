@@ -14,7 +14,7 @@ DATA_DIR = BASE_DIR / "data"
 CSV_PATH = BASE_DIR / "waste_disposal_fee.csv"
 
 MODEL_NAME = "jhgan/ko-sroberta-multitask"
-TEXT_TEMPLATE = "'{대형폐기물명}'은 {대형폐기물특징}입니다."
+TEXT_TEMPLATE = "품목: {대형폐기물명} | 유의어: {대형폐기물특징}"
 
 
 def main():
@@ -25,6 +25,8 @@ def main():
     # Preprocess: drop rows with missing fields, then format via template
     print("Preprocessing...")
     df = df.dropna(subset=["대형폐기물명", "대형폐기물특징"])
+    df["대형폐기물명"] = df["대형폐기물명"].astype(str)
+    df["대형폐기물특징"] = df["대형폐기물특징"].astype(str)
     print(f"Using text template: {TEXT_TEMPLATE}")
     texts = df.apply(
         lambda row: TEXT_TEMPLATE.format(**row.astype(str)),

@@ -19,6 +19,14 @@ embeddings: np.ndarray | None = None
 df: pd.DataFrame | None = None
 
 
+def _format_query(query: str) -> str:
+    """Normalize query to the same prompt format used for embedding."""
+    q = query.strip()
+    if not q.startswith("품목:"):
+        q = f"품목: {q}"
+    return q
+
+
 def load_resources():
     """Load model, embeddings, and CSV at startup."""
     global model, embeddings, df
@@ -83,7 +91,7 @@ def search(
     if not indices:
         return []
 
-    query_emb = model.encode(query, normalize_embeddings=True)
+    query_emb = model.encode(_format_query(query), normalize_embeddings=True)
     item_embs = embeddings[indices]
     similarities = item_embs @ query_emb
 
