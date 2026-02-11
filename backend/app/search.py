@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 
 import numpy as np
@@ -17,6 +18,17 @@ MODEL_NAME = "jhgan/ko-sroberta-multitask"
 model: SentenceTransformer | None = None
 embeddings: np.ndarray | None = None
 df: pd.DataFrame | None = None
+
+
+def _format_query(query: str) -> str:
+    """Normalize query to the same prompt format used for embedding."""
+    q = query.strip()
+    # Accept optional whitespace around the ':' in an existing prefix.
+    if re.match(r"^품목\s*:", q):
+        q = re.sub(r"^품목\s*:\s*", "품목: ", q, count=1)
+    else:
+        q = f"품목: {q}"
+    return q
 
 
 def load_resources():
@@ -83,7 +95,7 @@ def search(
     if not indices:
         return []
 
-    query_emb = model.encode(query, normalize_embeddings=True)
+    query_emb = model.encode(_format_query(query), normalize_embeddings=True)
     item_embs = embeddings[indices]
     similarities = item_embs @ query_emb
 
