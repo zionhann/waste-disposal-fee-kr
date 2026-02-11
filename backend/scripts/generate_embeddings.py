@@ -22,16 +22,13 @@ def main():
     df = pd.read_csv(CSV_PATH, encoding="utf-8-sig")
     print(f"Loaded {len(df)} items")
 
-    # Preprocess: drop rows with missing fields, then format via template
+    # Keep row filtering aligned with app/search.py (drop only missing names).
     print("Preprocessing...")
-    df = df.dropna(subset=["대형폐기물명", "대형폐기물특징"])
-    df["대형폐기물명"] = df["대형폐기물명"].astype(str)
-    df["대형폐기물특징"] = df["대형폐기물특징"].astype(str)
+    df = df.dropna(subset=["대형폐기물명"]).copy()
+    df["대형폐기물명"] = df["대형폐기물명"].astype(str).str.strip()
+    df["대형폐기물특징"] = df["대형폐기물특징"].fillna("").astype(str).str.strip()
     print(f"Using text template: {TEXT_TEMPLATE}")
-    texts = df.apply(
-        lambda row: TEXT_TEMPLATE.format(**row.astype(str)),
-        axis=1,
-    ).tolist()
+    texts = ("품목: " + df["대형폐기물명"] + " | 유의어: " + df["대형폐기물특징"]).tolist()
 
     print(f"Loading model ({MODEL_NAME})...")
     model = SentenceTransformer(MODEL_NAME)
